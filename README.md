@@ -11,3 +11,4 @@ Open `index.html` in a browser. No build step.
 
 ## Deploy
 Drop the folder on GitHub Pages, Netlify, Vercel or Cloudflare Pages.
+# TheeQuotah
