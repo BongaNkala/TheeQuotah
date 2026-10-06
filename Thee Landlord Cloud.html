@@ -1,0 +1,1611 @@
+<!DOCTYPE html>
+<html lang="en-ZA" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Thee Landlord Cloud — Quotation Studio for construction bids, pricing and PDF export.">
+<meta name="theme-color" content="#07080d">
+<meta name="color-scheme" content="dark light">
+<title>Thee Landlord Cloud — Quotation Studio</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;700&family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+<style>
+/* =========================================================
+   1. DESIGN TOKENS
+   ========================================================= */
+:root{
+  --g4:#c9a63a; --g5:#b8941f; --g6:#977816; --g7:#7a6012; --g50:#fbf7e8;
+  --i9:#0f0f0f; --i8:#1a1a1a; --i7:#262626; --i6:#3a3a3a; --i5:#5b5b5b; --i2:#d4d4d4;
+  --bg:#e8e8e8; --ui:#fff; --uifg:#1a1a1a; --uib:#d4d4d4;
+  --fd:"Fraunces",Georgia,serif;
+  --fb:"Inter","Segoe UI",Arial,sans-serif;
+  --fm:"JetBrains Mono",Consolas,monospace;
+  --gl:rgba(255,255,255,.07);
+  --gb:rgba(255,255,255,.15);
+  --tx:#eef0f8;
+  --tx2:rgba(238,240,248,.62);
+  --sh:0 10px 40px rgba(0,0,0,.4);
+  --hi:rgba(255,255,255,.2);
+  --inp:rgba(0,0,0,.28);
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+:root[data-theme=light]{
+  --gl:rgba(255,255,255,.6);
+  --gb:rgba(255,255,255,.9);
+  --tx:#14161f;
+  --tx2:rgba(20,22,31,.6);
+  --sh:0 10px 40px rgba(60,70,110,.18);
+  --hi:#fff;
+  --inp:rgba(255,255,255,.65);
+  --bg:#eceff7;
+}
+
+/* =========================================================
+   2. BASE
+   ========================================================= */
+*,*::before,*::after{box-sizing:border-box}
+html{background:#07080d}
+:root[data-theme=light] html,:root[data-theme=light]{background:#eceff7}
+*{margin:0;padding:0}
+body{
+  background:transparent;
+  font-family:var(--fb);
+  color:var(--tx);
+  min-height:100vh;
+  -webkit-font-smoothing:antialiased;
+}
+body::before{
+  content:"";
+  position:fixed;inset:-25%;z-index:-1;
+  filter:blur(40px);
+  animation:dr 26s ease-in-out infinite alternate;
+  background:
+    radial-gradient(38% 38% at 18% 22%,rgba(201,166,58,.42),transparent),
+    radial-gradient(42% 42% at 82% 28%,rgba(90,110,255,.30),transparent),
+    radial-gradient(48% 48% at 55% 92%,rgba(0,205,175,.20),transparent);
+}
+:root[data-theme=light] body::before{opacity:.75}
+@keyframes dr{to{transform:translate(5%,4%) rotate(8deg) scale(1.12)}}
+
+/* =========================================================
+   3. LAYOUT
+   ========================================================= */
+.wrap{
+  max-width:1500px;margin:0 auto;
+  padding:14px 16px 24px;
+  display:flex;flex-direction:column;gap:14px;
+}
+.sp{flex:1}
+
+/* =========================================================
+   4. GLASS SHELL
+   ========================================================= */
+.glass,.panel,.top,.stc{
+  background:var(--gl);
+  -webkit-backdrop-filter:blur(24px) saturate(170%);
+  backdrop-filter:blur(24px) saturate(170%);
+  border:1px solid var(--gb);
+  box-shadow:var(--sh),inset 0 1px 0 var(--hi);
+  border-radius:20px;
+  color:var(--tx);
+}
+
+/* =========================================================
+   5. HEADER
+   ========================================================= */
+.top{display:flex;align-items:center;gap:14px;padding:12px 16px;flex-wrap:wrap}
+.mk{
+  width:44px;height:44px;border-radius:14px;
+  background:linear-gradient(135deg,#e6c964,#977816);
+  display:grid;place-items:center;overflow:hidden;
+  box-shadow:0 6px 20px rgba(201,166,58,.45),inset 0 1px 0 rgba(255,255,255,.6);
+}
+.mk svg{width:26px;height:26px}
+.mk img{width:100%;height:100%;object-fit:contain;background:#fff;padding:4px}
+.bn{
+  font:700 22px var(--fd);letter-spacing:-.01em;
+  background:linear-gradient(180deg,var(--tx),#c9a63a 140%);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+}
+.bs{font:500 10px var(--fm);letter-spacing:.28em;text-transform:uppercase;color:var(--tx2)}
+.top .live{font:11px var(--fm);color:var(--tx2);display:flex;align-items:center;gap:6px}
+.top .live i{
+  width:7px;height:7px;border-radius:50%;background:#2ecc71;
+  box-shadow:0 0 10px #2ecc71;animation:pl 2s infinite;
+}
+@keyframes pl{50%{opacity:.4}}
+
+/* =========================================================
+   6. STATS
+   ========================================================= */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.stc{padding:14px 16px;position:relative;overflow:hidden}
+.stc::after{
+  content:"";position:absolute;left:0;right:0;top:0;height:2px;
+  background:linear-gradient(90deg,transparent,var(--g4),transparent);opacity:.8;
+}
+.stc span{font:600 10px var(--fm);letter-spacing:.2em;text-transform:uppercase;color:var(--tx2)}
+.stc b{display:block;font:700 24px var(--fd);margin-top:4px;font-variant-numeric:tabular-nums}
+.stc.hl b{
+  background:linear-gradient(180deg,#f3dc85,#b8941f);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+}
+
+/* =========================================================
+   7. MAIN GRID
+   ========================================================= */
+.app{display:grid;grid-template-columns:380px 1fr;gap:14px;padding:0;align-items:start}
+.panel{
+  position:sticky;top:14px;padding:14px;gap:10px;
+  max-height:calc(100vh - 28px);
+  display:flex;flex-direction:column;
+}
+.tabs{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:4px;padding:4px;
+  border-radius:12px;background:var(--inp);
+}
+.tabs button{border:0;padding:8px;border-radius:9px;color:var(--tx2);font:600 12px var(--fb);background:transparent;cursor:pointer}
+.tabs button.on{
+  background:var(--gl);color:var(--tx);
+  box-shadow:inset 0 1px 0 var(--hi),0 2px 8px rgba(0,0,0,.2);
+}
+.panel p{font-size:12px;opacity:.75;line-height:1.45;color:var(--tx2)}
+
+/* =========================================================
+   8. FORM CONTROLS
+   ========================================================= */
+textarea{
+  width:100%;flex:1;min-height:340px;resize:vertical;
+  font:12px/1.5 var(--fm);padding:10px;
+  border:1px solid var(--gb);border-radius:12px;
+  background:var(--inp);color:var(--tx);
+  outline:none;transition:.2s;
+}
+textarea:focus{border-color:var(--g4);box-shadow:0 0 0 3px rgba(201,166,58,.22)}
+.row{display:flex;gap:6px;flex-wrap:wrap}
+button,label.b{
+  font:600 12px var(--fb);padding:9px 12px;
+  border-radius:11px;border:1px solid var(--gb);
+  background:var(--gl);color:var(--tx);cursor:pointer;transition:.2s;
+}
+button:hover,label.b:hover{transform:translateY(-1px);border-color:var(--g4)}
+button.p{
+  background:linear-gradient(135deg,#e6c964,#b8941f);
+  color:#1a1405;border:0;
+  box-shadow:0 6px 18px rgba(201,166,58,.4);
+}
+button.big{padding:12px;font-size:13px}
+button:disabled{opacity:.5;cursor:wait}
+
+/* =========================================================
+   9. STAGE
+   ========================================================= */
+.stage{overflow:hidden;padding:18px 8px;border-radius:20px;min-width:0}
+
+/* =========================================================
+   10. DOCUMENT STYLES
+   ========================================================= */
+.page{
+  width:210mm;min-height:297mm;margin:0 auto 14mm;
+  background:#fff;color:var(--i8);
+  box-shadow:0 12px 32px rgba(0,0,0,.2);
+  position:relative;overflow:hidden;
+  display:flex;flex-direction:column;
+  page-break-after:always;
+  font:400 9pt/1.5 var(--fb);
+}
+.page:last-child{page-break-after:auto}
+.page>*{position:relative;z-index:2}
+.cn{position:absolute!important;width:30mm;height:30mm;z-index:0!important;background:linear-gradient(135deg,var(--g5),var(--g7));opacity:.8}
+.cn.tr{top:0;right:0;clip-path:polygon(100% 0,100% 100%,0 0)}
+.cn.bl{bottom:0;left:0;clip-path:polygon(0 0,100% 100%,0 100%)}
+
+.phead{
+  display:grid;grid-template-columns:24mm 1fr auto;gap:4.5mm;
+  padding:7mm 9mm 3mm;align-items:center;
+  border-bottom:.5px solid var(--i2);
+}
+.logo{
+  width:24mm;height:24mm;border:.5px solid var(--i2);border-bottom:2px solid var(--g5);
+  display:flex;align-items:center;justify-content:center;padding:2mm;
+  font:700 20pt var(--fd);color:var(--g5);
+}
+.logo img{max-width:100%;max-height:100%}
+.nm{font:700 17pt var(--fd);text-transform:uppercase;line-height:1.05;color:var(--i9)}
+.tg{font:500 7pt var(--fm);letter-spacing:.2em;color:var(--g6);text-transform:uppercase;margin-top:1.6mm}
+.reg{font:7.5pt var(--fm);color:var(--i5);margin-top:1.6mm}
+.reg b{color:var(--i8)}
+.qm{text-align:right}
+.qm .d{
+  display:inline-block;font:700 13pt var(--fd);color:#fff;
+  text-transform:uppercase;letter-spacing:.1em;
+  background:var(--i7);padding:2.4mm 4mm;border-bottom:2px solid var(--g5);
+}
+.qm .r{font:700 10pt var(--fm);color:var(--g7);margin-top:1.6mm}
+.qm .dt{font:8pt var(--fm);color:var(--i5)}
+
+.strip{
+  display:grid;grid-template-columns:repeat(3,1fr);
+  padding:2.4mm 9mm;border-bottom:.5px solid var(--i2);
+  background:#fbfbfa;font:7.5pt var(--fm);color:var(--i5);
+}
+.strip b{display:block;color:var(--i9);font-size:8pt}
+
+.ban{
+  display:grid;grid-template-columns:1fr 62mm;
+  margin:0 9mm;background:var(--i8);color:#fff;
+  border-bottom:3px solid var(--g5);
+}
+.ban .l{padding:4mm 4.5mm}
+.ban h1{font:700 24pt var(--fd);text-transform:uppercase;color:var(--g4);line-height:1.1}
+.ban .s{font:7.5pt var(--fm);letter-spacing:.15em;text-transform:uppercase;opacity:.75;margin-top:1.6mm}
+.ban .rt{
+  background:linear-gradient(135deg,var(--g4),var(--g6));
+  padding:3.2mm 4mm;display:flex;flex-direction:column;justify-content:center;
+  gap:1.6mm;font:8pt var(--fm);
+}
+.ban .rt div{display:flex;justify-content:space-between}
+.ban .rt b{color:#fff}
+
+.pt{margin:4mm 9mm 0;padding:3.2mm 4mm;background:#fbfbfa;border-left:4px solid var(--g5)}
+.lab{font:600 7.5pt var(--fm);letter-spacing:.2em;color:var(--g7);text-transform:uppercase}
+.pt .n{font:700 12pt var(--fd);color:var(--i9);line-height:1.25}
+.pt .st{font:8pt var(--fm);color:var(--i5)}
+
+.two{display:grid;grid-template-columns:1fr 1fr;gap:4mm;padding:4mm 9mm 0}
+.blk{border:1px solid var(--i2);border-radius:2px;overflow:hidden}
+.bh{
+  background:var(--i8);color:#fff;
+  font:700 8pt var(--fm);letter-spacing:.2em;text-transform:uppercase;
+  padding:1.6mm 3.2mm;border-bottom:2px solid var(--g5);
+}
+.kv{width:100%;border-collapse:collapse}
+.kv td{padding:1.6mm 3.2mm;border-bottom:.5px solid var(--i2);vertical-align:top}
+.kv td.k{
+  width:38%;font:700 8pt var(--fm);text-transform:uppercase;
+  background:#f7f7f5;border-right:.5px solid var(--i2);
+}
+.sc{padding:2.4mm 4mm}
+.sc ol{padding-left:6mm}
+.sc li{margin-bottom:1mm}
+.sc li::marker{color:var(--g6);font-weight:700}
+.nb{
+  background:var(--g50);border-left:3px solid var(--g5);
+  padding:2.4mm 3.2mm;font-size:8pt;margin-top:2.4mm;
+  color:var(--i7);line-height:1.6;
+}
+
+.pb{margin:4mm 9mm 0}
+table.it{width:100%;border-collapse:collapse}
+.it th{
+  background:#ececec;text-align:left;padding:1.6mm 2.4mm;
+  border:1px solid var(--i6);
+  font:700 7.5pt var(--fm);text-transform:uppercase;
+}
+.it td{padding:1.6mm 2.4mm;border:1px solid var(--i6);font:8pt var(--fm)}
+.it .n{text-align:right;white-space:nowrap}
+.it .c{text-align:center}
+.it tbody tr:nth-child(even) td{background:#fafafa}
+.it .tt td{background:#ececec!important;font-weight:700}
+.it .gt td{background:var(--i8)!important;color:#fff;font-weight:800;font-size:10pt}
+.it .gt td.a{color:var(--g4)}
+
+.sec{margin:4mm 9mm 0}
+.sec h3{
+  font:700 12pt var(--fd);text-transform:uppercase;
+  border-bottom:1.5px solid var(--g5);display:inline-block;margin-bottom:2mm;
+}
+.sec ol{padding-left:6mm;color:var(--i6)}
+.sec li{margin-bottom:1.4mm}
+.sec li::marker{color:var(--g6);font-weight:700}
+
+.co{display:grid;grid-template-columns:1fr 1fr;gap:4mm;color:var(--i6)}
+.sig{display:grid;grid-template-columns:1fr 1fr;gap:5.5mm;margin:6mm 9mm 0}
+.sig .ln{border-bottom:1px solid var(--i6);height:10mm}
+.sig .lab{color:#7a7a7a;margin-bottom:1.6mm}
+
+.bank{
+  margin:4mm 9mm 0;border:.5px solid var(--i2);border-left:2px solid var(--g5);
+  background:#fbfbfa;padding:2.4mm 4mm;font:8pt var(--fm);
+}
+.bank b{display:inline-block;width:22mm}
+
+.pf{
+  margin-top:auto;background:var(--i8);color:#fff;
+  padding:2.4mm 9mm;display:flex;justify-content:space-between;
+  font:7.5pt var(--fm);letter-spacing:.12em;text-transform:uppercase;
+  border-top:2px solid var(--g5);
+}
+.pf i{color:var(--g4);font-style:normal;font-weight:700}
+.pad{height:4mm}
+
+/* =========================================================
+   11. PANEL INNER TABS
+   ========================================================= */
+#ed,#lb{display:flex;flex-direction:column;gap:10px;min-height:0;flex:1}
+#lb{display:none;overflow:auto}
+#ed{overflow:auto}
+#ed textarea#src{min-height:200px}
+
+.li{
+  display:flex;justify-content:space-between;align-items:center;gap:8px;
+  padding:10px 12px;border-radius:12px;
+  background:var(--inp);border:1px solid var(--gb);font-size:12px;
+}
+.li b{display:block;font:700 12px var(--fm)}
+.li span{color:var(--tx2)}
+.li button{padding:6px 9px}
+
+/* =========================================================
+   12. DROP ZONE
+   ========================================================= */
+.dz{
+  display:flex;flex-direction:column;gap:3px;align-items:center;text-align:center;
+  padding:16px 12px;border-radius:14px;
+  border:1.5px dashed var(--gb);background:var(--inp);
+  cursor:pointer;transition:.25s;
+}
+.dz:hover,.dz.ov{
+  border-color:var(--g4);
+  box-shadow:0 0 0 4px rgba(201,166,58,.18),0 0 30px rgba(201,166,58,.2);
+  transform:translateY(-1px);
+}
+.dz b{
+  font:700 14px var(--fd);
+  background:linear-gradient(180deg,var(--tx),#c9a63a 160%);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+}
+.dz span{font-size:11px;color:var(--tx2);line-height:1.4}
+.dz svg{width:26px;height:26px;stroke:var(--g4);fill:none;stroke-width:1.8}
+
+/* =========================================================
+   13. PRICING TAB
+   ========================================================= */
+#pr{display:none;flex-direction:column;gap:10px;min-height:0;flex:1;overflow:auto}
+#pr h4{font:600 10px var(--fm);letter-spacing:.2em;text-transform:uppercase;color:var(--g4);margin-top:4px}
+.pg{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.pg label{font-size:10px;color:var(--tx2);display:flex;flex-direction:column;gap:3px}
+#pr input,#pr select,#pr textarea{
+  background:var(--inp);color:var(--tx);
+  border:1px solid var(--gb);border-radius:9px;
+  padding:7px 8px;font:12px var(--fm);width:100%;outline:none;
+}
+#pr textarea{min-height:64px;flex:none}
+#pr input[type=checkbox]{width:auto}
+.rw{display:flex;justify-content:space-between;gap:8px;font:11px var(--fm);padding:5px 0;border-bottom:1px solid var(--gb)}
+.rw.k{font-weight:700;color:var(--g4)}
+.rw.bad b{color:#ff6b6b}
+.rw.ok b{color:#3ddc97}
+.pbar{position:relative;height:34px;margin:16px 4px 26px;border-radius:99px;background:var(--inp);border:1px solid var(--gb)}
+.pbar i{position:absolute;top:-6px;bottom:-6px;width:3px;border-radius:2px}
+.pbar u{
+  position:absolute;top:38px;font:9px var(--fm);
+  transform:translateX(-50%);text-decoration:none;white-space:nowrap;color:var(--tx2);
+}
+.au{font-size:11px;line-height:1.4;padding:4px 0;display:flex;gap:6px}
+.cb{display:flex;gap:6px;align-items:flex-start;font-size:11px;padding:3px 0}
+.tb{height:6px;border-radius:9px;background:linear-gradient(90deg,#e6c964,#977816)}
+
+/* =========================================================
+   14. GENERATOR BLOCKS
+   ========================================================= */
+.gen{
+  display:flex;flex-direction:column;gap:8px;padding:12px;
+  border-radius:14px;background:var(--inp);border:1px solid var(--gb);
+}
+.gen h4,#ck h4{font:600 10px var(--fm);letter-spacing:.2em;text-transform:uppercase;color:var(--g4);margin:2px 0 0}
+.gen textarea{min-height:84px;flex:none;font-size:11px}
+.cl{font-size:10px;color:var(--tx2);word-break:break-all}
+.cl a{color:var(--g4);cursor:pointer;margin-left:6px}
+.gen .mu{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--tx2)}
+.gen .mu input{
+  width:70px;background:var(--inp);color:var(--tx);
+  border:1px solid var(--gb);border-radius:8px;padding:6px;font:12px var(--fm);
+}
+#ck{display:none;padding:10px 12px;border-radius:14px;background:var(--inp);border:1px solid var(--gb)}
+#ck .au,#ck .cb{font-size:11px;line-height:1.4;display:flex;gap:6px;padding:3px 0}
+
+/* =========================================================
+   15. RESPONSIVE
+   ========================================================= */
+@media(max-width:1000px){
+  .app{grid-template-columns:1fr}
+  .panel{position:static;max-height:none}
+  .stats{grid-template-columns:1fr 1fr}
+}
+
+/* =========================================================
+   16. PRINT
+   ========================================================= */
+@page{size:A4;margin:0}
+@media print{
+  html,body{background:#fff!important}
+  body::before,.top,.stats,.panel{display:none!important}
+  .wrap{padding:0;display:block}
+  .app{display:block}
+  .stage{padding:0;border:0;box-shadow:none;background:none;-webkit-backdrop-filter:none;backdrop-filter:none}
+  #out{zoom:1!important}
+  .page{margin:0;box-shadow:none}
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <header class="top">
+    <div class="mk" id="brand" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="#1a1405"><path d="M7 18a4.5 4.5 0 0 1-.6-8.96A6 6 0 0 1 18 8.5a4.75 4.75 0 0 1-.5 9.5H7z"/></svg>
+    </div>
+    <div>
+      <div class="bn">Thee Landlord Cloud</div>
+      <div class="bs">Quotation Studio</div>
+    </div>
+    <div class="sp"></div>
+    <div class="live"><i></i><span id="qn">—</span></div>
+    <button id="thb" aria-label="Toggle light and dark theme"
+      onclick="th(document.documentElement.dataset.theme==='dark'?'light':'dark')">◐ Theme</button>
+    <button class="p" aria-label="Print or save as PDF" onclick="window.print()">Save as PDF</button>
+  </header>
+
+  <section class="stats">
+    <div class="stc"><span>Line items</span><b id="s1">0</b></div>
+    <div class="stc"><span>Subtotal excl. VAT</span><b id="s2">R 0.00</b></div>
+    <div class="stc"><span>VAT</span><b id="s3">R 0.00</b></div>
+    <div class="stc hl"><span>Total incl. VAT</span><b id="s4">R 0.00</b></div>
+  </section>
+
+  <div class="app">
+    <aside class="panel">
+      <div class="tabs">
+        <button class="on" id="t1" onclick="tab(1)">Editor</button>
+        <button id="t3" onclick="tab(3)">Pricing</button>
+        <button id="t2" onclick="tab(2)">Library</button>
+      </div>
+
+      <!-- EDITOR -->
+      <div id="ed">
+        <div class="gen">
+          <h4>1 · Bid documents</h4>
+          <label class="dz" id="dz">
+            <input type="file" id="bd" multiple accept=".pdf,.docx,.xlsx,.xls,.txt,.md,.csv,image/*" hidden>
+            <svg viewBox="0 0 24 24"><path d="M12 16V4m0 0L7 9m5-5 5 5M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>
+            <b>Upload bid documents</b>
+            <span>PDF · Word · Excel · text · scanned images. Drop files here.</span>
+          </label>
+          <div class="cl" id="bl"></div>
+
+          <h4>2 · Your rates &amp; information</h4>
+          <div id="rtz" style="display:flex;flex-direction:column;gap:6px">
+            <textarea id="rt" spellcheck="false" placeholder="Paste whatever you have: rates, quantities, lump sums, scope notes…&#10;Floor tiles 185 per m²&#10;Roof repairs — lump sum 23000"></textarea>
+            <div class="row">
+              <label class="b">Upload rates / info file (Excel, CSV, PDF…)
+                <input type="file" id="rf" multiple accept=".xlsx,.xls,.csv,.pdf,.docx,.txt,image/*" hidden>
+              </label>
+            </div>
+          </div>
+          <div class="cl" id="rl"></div>
+
+          <div class="mu">
+            Mark-up on my rates %
+            <input id="mu" type="number" value="15" step="any">
+            <span>(0 = rates are final)</span>
+          </div>
+          <button class="p big" id="gb" onclick="gen()">✦ Generate quotation</button>
+        </div>
+
+        <button id="stp" style="display:none" onclick="stop()">■ Stop reading</button>
+        <div id="ck"></div>
+        <p>Fine-tune or paste details manually below. Builds live and auto-saves to your Library.</p>
+        <textarea id="src" spellcheck="false" placeholder="Paste quotation details here…"></textarea>
+
+        <div class="row">
+          <button onclick="nw()">＋ New</button>
+          <button onclick="ex()">Example</button>
+          <button onclick="wa()">WhatsApp summary</button>
+          <button onclick="ai()">AI prompt</button>
+          <label class="b">Logo<input type="file" id="lg" accept="image/*" hidden></label>
+        </div>
+        <p id="msg"></p>
+      </div>
+
+      <!-- PRICING -->
+      <div id="pr">
+        <p>Internal only — none of this prints. Saved per quotation.</p>
+        <h4>Cost build-up (% of direct cost)</h4>
+        <div class="pg">
+          <label>Overhead recovery %<input data-k="oh" type="number" step="any"></label>
+          <label>Contingency %<input data-k="ct" type="number" step="any"></label>
+          <label>Days funded<input data-k="days" type="number" step="any"></label>
+          <label>Cost of capital % p.a.<input data-k="rate" type="number" step="any"></label>
+        </div>
+        <h4>Risk register — description | probability % | impact R</h4>
+        <textarea data-k="risks" spellcheck="false" placeholder="Concealed roof defects | 20 | 15000"></textarea>
+        <h4>Margin strategy</h4>
+        <div class="pg">
+          <label>Competition<select data-k="fc"><option value="0">Medium</option><option value="1">High</option><option value="2">Low</option></select></label>
+          <label>Risk<select data-k="fr"><option value="0">Medium</option><option value="1">High</option><option value="2">Low</option></select></label>
+          <label>Job size<select data-k="fs"><option value="0">Medium</option><option value="1">Small</option><option value="2">Large</option></select></label>
+          <label>Cash-flow<select data-k="fw"><option value="0">Comfortable</option><option value="1">Tight</option></select></label>
+          <label>Target margin % (on cost)<input data-k="margin" type="number" step="any"></label>
+          <label>Max competitive margin %<input data-k="maxm" type="number" step="any"></label>
+          <label>Price ceiling R excl. VAT (optional)<input data-k="ceil" type="number" step="any"></label>
+        </div>
+        <div class="row">
+          <button onclick="sug()">Suggest margin</button>
+          <button class="p" onclick="apl()">Apply to quotation</button>
+        </div>
+        <h4>Direct-cost split %</h4>
+        <div class="pg">
+          <label>Materials<input data-k="s0" type="number" step="any"></label>
+          <label>Labour<input data-k="s1" type="number" step="any"></label>
+          <label>Transport / equipment<input data-k="s2" type="number" step="any"></label>
+          <label>Other<input data-k="s3" type="number" step="any"></label>
+        </div>
+        <div id="pres"></div>
+      </div>
+
+      <!-- LIBRARY -->
+      <div id="lb"></div>
+    </aside>
+
+    <main class="stage glass" id="stage"><div id="out"></div></main>
+  </div>
+</div>
+
+<script>
+/* =========================================================
+   0. SAFE STORAGE
+   ========================================================= */
+var store = (function(){
+  var ok = true;
+  try { localStorage.setItem("__t","1"); localStorage.removeItem("__t"); }
+  catch(e){ ok = false; }
+  return {
+    get: function(k){ try { return ok ? localStorage.getItem(k) : null; } catch(e){ return null; } },
+    set: function(k,v){ try { if(ok) localStorage.setItem(k,v); } catch(e){} },
+    del: function(k){ try { if(ok) localStorage.removeItem(k); } catch(e){} }
+  };
+})();
+
+/* =========================================================
+   1. DOM HELPERS
+   ========================================================= */
+var $ = function(id){ return document.getElementById(id); };
+
+/* =========================================================
+   2. COMPANY
+   ========================================================= */
+var CO = {
+  name:"Thee Landlord (Pty) Ltd",
+  tag:["Build","Maintain","Deliver"],
+  reg:"2019/287364/07",
+  csd:"MAAA1437675",
+  vat:"4440317099",
+  tax:"9107659246",
+  cidb:"1GB / 1ME / 1SG",
+  bbbee:"Level 1 (100% Black Owned)",
+  addr:["22 Skool Street, Home Lake","Randfontein, Gauteng, 1787"],
+  tel:"060 422 1452",
+  mail:"theelandlordptyltd@gmail.com",
+  person:"Siyabonga Nkala",
+  role:"Director & CEO",
+  bank:[
+    ["Bank","Capitec Business Bank"],
+    ["Account","THEE LANDLORD (PTY) LTD"],
+    ["Acc No","1055845976"],
+    ["Branch","450105 (Universal)"]
+  ]
+};
+
+/* =========================================================
+   3. LOGO — auto-detect from same folder OR saved upload
+   ========================================================= */
+var LOGO_FILES = ["logo.png","logo.svg","logo.jpg","logo.jpeg","logo.webp"];
+var logo = store.get("tl-logo") || "";
+var logoSource = logo ? "saved" : "none";
+
+function applyBrand(){
+  var mk = $("brand");
+  if(!mk) return;
+  if(logo){
+    mk.innerHTML = '<img src="'+logo+'" alt="Thee Landlord logo">';
+  } else {
+    mk.innerHTML = '<svg viewBox="0 0 24 24" fill="#1a1405"><path d="M7 18a4.5 4.5 0 0 1-.6-8.96A6 6 0 0 1 18 8.5a4.75 4.75 0 0 1-.5 9.5H7z"/></svg>';
+  }
+}
+
+function probeLocalLogo(){
+  if(logo) { applyBrand(); return; }
+  var i = 0;
+  (function next(){
+    if(i >= LOGO_FILES.length){ applyBrand(); return; }
+    var url = LOGO_FILES[i++];
+    var img = new Image();
+    img.onload = function(){
+      logo = url;
+      logoSource = "folder";
+      applyBrand();
+      if(typeof go === "function") go();
+    };
+    img.onerror = next;
+    img.src = url;
+  })();
+}
+
+/* =========================================================
+   4. EXAMPLE QUOTATION
+   ========================================================= */
+var EX =
+"Quote No: TLL-WRDM-04-2027\n"+
+"Date: 30 Sep 2026\n"+
+"Validity: 30 days\n"+
+"Client: West Rand District Municipality\n"+
+"Reference: WRDM/CORP/04/2027\n"+
+"Project: Refurbishment of the Executive Mayor's Official Residence — Phase 1\n"+
+"Site: 31 Aloe Street, Greenhills, Randfontein\n"+
+"Closing Date: 7 October 2026 @ 11:00\n"+
+"Overhead %: 15\n"+
+"VAT %: 15\n\n"+
+"Scope:\n"+
+"- Supply and installation of **145.88 m²** porcelain matte, non-slip 10mm floor tiles.\n"+
+"- Painting of **109.65 m²** wall surfaces and **148.23 m²** ceiling surfaces.\n"+
+"- Replacement of **five (5) aluminium windows**.\n"+
+"- Supply and installation of **one (1)** automated steel double garage door — 4500mm.\n"+
+"- Roof repairs and sealing, including water testing.\n\n"+
+"Items:\n"+
+"Description | Qty | Unit | Rate | Amount\n"+
+"Porcelain matte non-slip 10mm floor tiles | 145.88 | m² | 185 |\n"+
+"Tile adhesive, grout, trims & sundries | Allowance | | | 7500\n"+
+"Floor tile installation | 145.88 | m² | 150 |\n"+
+"Floor preparation & finishing | Allowance | | | 3500\n"+
+"Wall paint materials | 109.65 | m² | 22 |\n"+
+"Ceiling paint materials | 148.23 | m² | 22 |\n"+
+"Wall & ceiling painting labour | 257.88 | m² | 55 |\n"+
+"Clear corrugated poly sheet | 2.18 | m² | | 1000\n"+
+"Aluminium windows | 5 | No. | | 8000\n"+
+"Automated steel double garage door — 4500mm | 1 | No. | | 23000\n"+
+"Roof repairs, waterproofing, sealing & flashing | Allowance | | | 23000\n"+
+"Frames & burglar doors — white enamel | Allowance | | | 5000\n"+
+"Mobilisation, transport & preliminaries | Allowance | | | 7500\n"+
+"Compliance, OHS documentation & administration | Allowance | | | 2648.44\n\n"+
+"Notes:\n"+
+"This quotation is for Phase 1 only and uses the quantities in the bid document without increasing them. Additional work will be handled as a formal variation, subject to prior written approval.\n\n"+
+"Terms:\n"+
+"- This quotation is valid for 30 days from the quotation date.\n"+
+"- Pricing is based on the quantities and measurements in the bid document.\n"+
+"- Work commences subject to official appointment / Purchase Order.\n"+
+"- Additional work outside the stated scope is subject to an approved variation.";
+
+/* =========================================================
+   5. STATE
+   ========================================================= */
+var LIB = [];
+try { LIB = JSON.parse(store.get("tl-lib") || "[]"); } catch(e){ LIB = []; }
+var BID = [], RAT = [];
+var st2, tm, ctl;
+var DEF = {
+  oh:10, ct:3, days:30, rate:12, risks:"",
+  fc:0, fr:0, fs:0, fw:0,
+  margin:10, maxm:25, ceil:0,
+  s0:50, s1:30, s2:10, s3:10,
+  chk:{}
+};
+var PE = Object.assign({}, DEF, {chk:{}});
+
+/* =========================================================
+   6. UTILITIES
+   ========================================================= */
+function esc(s){
+  return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+function rich(s){
+  return esc(s).replace(/\*\*(.+?)\*\*/g,"<b>$1</b>");
+}
+function num(s){
+  var n = parseFloat(String(s).replace(/[^0-9.\-]/g,""));
+  return isNaN(n) ? null : n;
+}
+function R(n){
+  n = n || 0;
+  return "R " + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,",");
+}
+function norm(s){
+  return s.toLowerCase().replace(/[^a-z0-9]+/g," ").trim();
+}
+function clean(s){
+  return s.replace(/^```[a-z]*\s*$/gmi,"").replace(/^\s+/,"");
+}
+function msg(t){ $("msg").textContent = t; }
+
+/* =========================================================
+   7. PARSER
+   ========================================================= */
+function parse(t){
+  var d = {h:{},scope:[],items:[],notes:[],terms:[],checklist:[],flags:[]};
+  var sec = "h";
+  t.split(/\r?\n/).forEach(function(l){
+    var s = l.trim();
+    if(!s) return;
+    var m = s.match(/^(scope|items|notes|terms|checklist|flags)\s*:\s*$/i);
+    if(m){ sec = m[1].toLowerCase(); return; }
+    if(sec === "h"){
+      var k = s.match(/^([^:|]{1,40}):\s*(.*)$/);
+      if(k) d.h[k[1].trim().toLowerCase()] = k[2].trim();
+      return;
+    }
+    if(sec === "items"){
+      if(s.indexOf("|") < 0 || /^description\s*\|/i.test(s)) return;
+      var p = s.split("|").map(function(x){ return x.trim(); });
+      d.items.push({desc:p[0],qty:p[1]||"",unit:p[2]||"",rate:p[3]||"",amt:p[4]||""});
+      return;
+    }
+    var c = s.replace(/^([-•*]|\d+[.)])\s+/,"");
+    if(sec === "notes") d.notes.push(c);
+    else d[sec].push(c);
+  });
+  return d;
+}
+function pick(h, ks){
+  for(var i=0;i<ks.length;i++) if(h[ks[i]]) return h[ks[i]];
+  return "";
+}
+
+/* =========================================================
+   8. DOCUMENT BUILDER
+   ========================================================= */
+function build(t){
+  var d = parse(t), h = d.h, now = new Date();
+
+  var qn  = pick(h,["quote no","quote number","quote","quotation no"]) || "Q-"+now.toISOString().slice(0,10).replace(/-/g,"");
+  var dt  = pick(h,["date"]) || now.toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"});
+  var val = pick(h,["validity","valid"]) || "30 days";
+  var cl  = pick(h,["client","customer"]);
+  var ref = pick(h,["reference","bid","bid number","ref"]);
+  var pr  = pick(h,["project","title"]) || "Quotation";
+  var st  = pick(h,["site","location"]);
+  var oh  = num(pick(h,["overhead %","overhead","overheads","margin"])) || 0;
+  var vr  = num(pick(h,["vat %","vat"]));
+  if(vr === null) vr = 15;
+
+  var known = ["quote no","quote number","quote","quotation no","date","validity","valid",
+               "client","customer","reference","bid","bid number","ref","project","title",
+               "site","location","overhead %","overhead","overheads","margin","vat %","vat"];
+
+  var rows = [["Client",cl],["Reference",ref],["Project",pr],["Site",st]];
+  Object.keys(h).forEach(function(k){
+    if(known.indexOf(k) < 0){
+      rows.push([k.replace(/\b\w/g,function(c){return c.toUpperCase();}), h[k]]);
+    }
+  });
+  rows.push(["Contractor", CO.name]);
+
+  var sum = 0;
+  var body = d.items.map(function(it,i){
+    var q = num(it.qty), r = num(it.rate), a = num(it.amt);
+    if(a === null) a = (q !== null && r !== null) ? q*r : 0;
+    a = Math.round(a*100)/100;
+    sum += a;
+    var qb = it.unit && q !== null ? it.qty+" "+it.unit : (it.qty + (it.unit ? " "+it.unit : ""));
+    var rb = r !== null ? R(r)+(it.unit ? " /"+it.unit : "") : (it.rate || "–");
+    return '<tr><td class="c">'+(i+1)+'</td><td>'+rich(it.desc)+'</td>'+
+           '<td class="c">'+esc(qb||"–")+'</td>'+
+           '<td class="n">'+esc(rb)+'</td>'+
+           '<td class="n">'+R(a)+'</td></tr>';
+  }).join("");
+
+  sum = sum || 0;
+  var ohv = Math.round(sum*oh)/100;
+  var ex  = sum + ohv;
+  var vat = Math.round(ex*vr)/100;
+  var tot = ex + vat;
+
+  var tr = function(l,v,c){
+    return '<tr class="'+(c||"tt")+'"><td colspan="4" class="n">'+l+
+           '</td><td class="n'+(c?" a":"")+'">'+R(v)+'</td></tr>';
+  };
+  var totals =
+    (oh ? tr("Direct / Working Cost",sum) +
+          tr("Overheads, Management &amp; Profit ("+oh+"%)",ohv) : "") +
+    tr("TOTAL QUOTATION PRICE – EXCL. VAT",ex) +
+    tr("VAT @ "+vr+"%",vat) +
+    tr("TOTAL QUOTATION PRICE – INCL. VAT",tot,"gt");
+
+  var ol = function(a){
+    return "<ol>"+a.map(function(x){ return "<li>"+rich(x)+"</li>"; }).join("")+"</ol>";
+  };
+
+  var head = function(meta){
+    return '<div class="cn tr"></div><div class="cn bl"></div>'+
+      '<header class="phead">'+
+        '<div class="logo">'+(logo?'<img src="'+logo+'" alt="Logo">':"TL")+'</div>'+
+        '<div>'+
+          '<div class="nm">'+esc(CO.name)+'</div>'+
+          '<div class="tg">'+CO.tag.join(" · ")+'</div>'+
+          (meta?'<div class="reg"><b>Reg:</b> '+CO.reg+' | <b>CSD:</b> '+CO.csd+' | <b>VAT:</b> '+CO.vat+'</div>':"")+
+        '</div>'+
+        '<div class="qm">'+
+          (meta?"":'<div class="d">Quotation</div>'+
+                   '<div class="r">'+esc(qn)+'</div>'+
+                   '<div class="dt">'+esc(dt)+'</div>')+
+        '</div>'+
+      '</header>';
+  };
+  var foot = function(n){
+    return '<div class="pf"><span>Quality Service · Reliable Solutions · Your Trusted Partner</span>'+
+           '<i>Page '+n+' of 3</i></div>';
+  };
+
+  var p1 = head(1) +
+    '<div class="strip">'+
+      '<div><b>'+esc(CO.addr[0])+'</b>'+esc(CO.addr[1])+'</div>'+
+      '<div><b>'+CO.tel+'</b>Mon–Fri · 08:00–17:00</div>'+
+      '<div><b>'+CO.mail+'</b>Response within 24h</div>'+
+    '</div>'+
+    '<div class="ban">'+
+      '<div class="l"><h1>Quotation</h1><div class="s">'+esc(pr)+'</div></div>'+
+      '<div class="rt">'+
+        '<div><span>Quote No</span><b>'+esc(qn)+'</b></div>'+
+        '<div><span>Date</span><b>'+esc(dt)+'</b></div>'+
+        '<div><span>Validity</span><b>'+esc(val)+'</b></div>'+
+      '</div>'+
+    '</div>'+
+    '<div class="pt">'+
+      '<div class="lab">Project</div>'+
+      '<div class="n">'+esc(pr)+'</div>'+
+      '<div class="st">'+esc(st)+'</div>'+
+    '</div>'+
+    '<div class="two">'+
+      '<div class="blk"><div class="bh">Client Details</div><table class="kv">'+
+        rows.filter(function(r){ return r[1]; })
+            .map(function(r){ return '<tr><td class="k">'+esc(r[0])+'</td><td>'+esc(r[1])+'</td></tr>'; })
+            .join("")+
+      '</table></div>'+
+      '<div class="blk"><div class="bh">Description and Scope of Work</div>'+
+        '<div class="sc">'+(d.scope.length ? ol(d.scope) : "<p>—</p>")+'</div>'+
+      '</div>'+
+    '</div>'+
+    '<div class="pad"></div>'+
+    foot(1);
+
+  var p2 = head(0) +
+    '<div class="pb">'+
+      '<div class="bh">Pricing Schedule</div>'+
+      '<table class="it"><thead><tr>'+
+        '<th class="c" style="width:5%">No.</th>'+
+        '<th style="width:44%">Description</th>'+
+        '<th class="c" style="width:13%">Qty / Basis</th>'+
+        '<th class="n" style="width:17%">Unit Rate</th>'+
+        '<th class="n" style="width:21%">Amount Excl. VAT</th>'+
+      '</tr></thead><tbody>'+body+totals+'</tbody></table>'+
+    '</div>'+
+    (d.notes.length ? '<div class="sec"><div class="nb"><b>Note:</b> '+
+      d.notes.map(rich).join("<br>")+'</div></div>' : "")+
+    foot(2);
+
+  var p3 = head(0) +
+    (d.terms.length ? '<div class="sec"><h3>Terms &amp; Conditions</h3>'+ol(d.terms)+'</div>' : "")+
+    '<div class="sec"><h3>Company Details</h3>'+
+      '<div class="co">'+
+        '<div><b>'+esc(CO.name.toUpperCase())+'</b><br>'+
+          CO.addr.map(esc).join("<br>")+
+          '<br><br><span class="lab">Contact Person</span><br>'+
+          '<b>'+CO.person+'</b>, '+esc(CO.role)+
+        '</div>'+
+        '<div><b>STATUTORY</b><br>'+
+          'Reg: '+CO.reg+'<br>'+
+          'CSD: '+CO.csd+'<br>'+
+          'VAT: '+CO.vat+'<br>'+
+          'Income Tax: '+CO.tax+'<br>'+
+          'CIDB: '+CO.cidb+'<br>'+
+          'B-BBEE: '+CO.bbbee+
+        '</div>'+
+      '</div>'+
+    '</div>'+
+    '<div class="sig">'+
+      '<div><div class="lab">Authorised Signature</div><div class="ln"></div>'+
+        '<b>'+CO.person+'</b><br>'+esc(CO.role)+'<br>'+esc(CO.name)+'</div>'+
+      '<div><div class="lab">Date</div><div class="ln"></div></div>'+
+    '</div>'+
+    '<div class="bank">'+
+      '<b style="width:auto;display:block;margin-bottom:1mm;letter-spacing:.15em">BANKING DETAILS</b>'+
+      CO.bank.map(function(r){ return '<div><b>'+r[0]+'</b>: '+esc(r[1])+'</div>'; }).join("")+
+      '<div><b>Reference</b>: '+esc(qn)+'</div>'+
+    '</div>'+
+    '<div class="pad"></div>'+
+    foot(3);
+
+  window.T = {
+    n:d.items.length,
+    sum:ex, dir:sum, vat:vat, tot:tot,
+    qn:qn, cl:cl, val:val, pr:pr
+  };
+
+  return [p1,p2,p3].map(function(p){
+    return '<section class="page">'+p+'</section>';
+  }).join("");
+}
+
+/* =========================================================
+   9. RENDER
+   ========================================================= */
+function go(){
+  var t = $("src").value;
+  $("out").innerHTML = build(t);
+  after(t);
+  store.set("tl-src", t);
+  document.title = "Quotation " + (parse(t).h["quote no"] || "");
+}
+
+$("src").addEventListener("input", function(){
+  clearTimeout(tm);
+  tm = setTimeout(go, 250);
+});
+
+function after(t){
+  var x = window.T || {};
+  cnt("s1", x.n || 0, 0);
+  cnt("s2", x.sum || 0, 1);
+  cnt("s3", x.vat || 0, 1);
+  cnt("s4", x.tot || 0, 1);
+  $("qn").textContent = x.qn || "—";
+  if(x.n){
+    clearTimeout(st2);
+    st2 = setTimeout(function(){ save(t); }, 900);
+  }
+  fit();
+  eng();
+  rck();
+}
+
+function cnt(id, v, money){
+  var e = $(id);
+  var a = +e.dataset.v || 0;
+  var t0 = performance.now();
+  e.dataset.v = v;
+  (function f(n){
+    var k = Math.min(1, (n-t0)/450);
+    var c = a + (v-a) * (1 - Math.pow(1-k,3));
+    e.textContent = money ? R(c) : Math.round(c);
+    if(k < 1) requestAnimationFrame(f);
+  })(t0);
+}
+
+function fit(){
+  var w = $("stage").clientWidth - 16;
+  $("out").style.zoom = Math.min(1, w/794);
+}
+window.addEventListener("resize", fit);
+
+/* =========================================================
+   10. LIBRARY
+   ========================================================= */
+function save(t){
+  var x = window.T;
+  var i = LIB.findIndex(function(q){ return q.qn === x.qn; });
+  var o = {qn:x.qn, cl:x.cl, tot:x.tot, src:t, pe:PE, ts:Date.now()};
+  if(i >= 0) LIB.splice(i,1);
+  LIB.unshift(o);
+  LIB = LIB.slice(0,50);
+  store.set("tl-lib", JSON.stringify(LIB));
+  rl();
+}
+
+function rl(){
+  $("lb").innerHTML = LIB.length
+    ? LIB.map(function(q,i){
+        return '<div class="li"><div><b>'+esc(q.qn)+'</b><span>'+esc(q.cl||"No client")+' · '+R(q.tot)+'</span></div>'+
+               '<div><button data-o="'+i+'">Open</button> <button data-d="'+i+'">✕</button></div></div>';
+      }).join("")
+    : '<p>No saved quotations yet. They save automatically as you work.</p>';
+}
+
+$("lb").addEventListener("click", function(e){
+  var o = e.target.dataset.o, d = e.target.dataset.d;
+  if(o != null){
+    PE = Object.assign({}, DEF, LIB[o].pe || {});
+    sync();
+    $("src").value = LIB[o].src;
+    go();
+    tab(1);
+  }
+  if(d != null){
+    LIB.splice(d,1);
+    store.set("tl-lib", JSON.stringify(LIB));
+    rl();
+  }
+});
+
+/* =========================================================
+   11. TABS + THEME
+   ========================================================= */
+function tab(n){
+  $("pr").style.display = n === 3 ? "flex" : "none";
+  $("t3").className      = n === 3 ? "on" : "";
+  $("ed").style.display = n === 1 ? "flex" : "none";
+  $("lb").style.display = n === 2 ? "flex" : "none";
+  $("t1").className      = n === 1 ? "on" : "";
+  $("t2").className      = n === 2 ? "on" : "";
+  if(n === 3) eng();
+}
+
+function th(m){
+  document.documentElement.dataset.theme = m;
+  store.set("tl-th", m);
+}
+th(store.get("tl-th") || "dark");
+
+/* =========================================================
+   12. NEW / EXAMPLE / WHATSAPP / AI
+   ========================================================= */
+function nw(){
+  PE = Object.assign({}, DEF, {chk:{}});
+  sync();
+  $("src").value =
+    "Quote No: \nDate: \nValidity: 30 days\nClient: \nReference: \nProject: \nSite: \n"+
+    "Overhead %: 0\nVAT %: 15\n\nScope:\n- \n\nItems:\nDescription | Qty | Unit | Rate | Amount\n\n"+
+    "Notes:\n\nTerms:\n- This quotation is valid for 30 days from the quotation date.";
+  go();
+  $("src").focus();
+}
+
+function ex(){ $("src").value = EX; go(); }
+
+function ai(){
+  var p = "Convert the quotation details below into this exact plain-text format. "+
+          "Put Key: value lines first (Quote No, Date, Validity, Client, Reference, Project, Site, "+
+          "Overhead %, VAT %, plus any extra details). Then sections named Scope:, Items:, Notes:, "+
+          "Terms: on their own line. Scope/Terms are lines starting with '- '. Items are lines "+
+          "'Description | Qty | Unit | Rate | Amount' (leave Rate blank for lump-sum allowances and "+
+          "give Amount; leave Amount blank when Qty x Rate applies). Do not add prices I haven't given.\n\n"+
+          "DETAILS:\n";
+  var done = function(){ msg("Prompt copied — paste it into Claude with your details, then paste the result here."); };
+  try{
+    navigator.clipboard.writeText(p).then(done, function(){ msg("Copy blocked by the browser."); });
+  }catch(e){ msg("Copy blocked by the browser."); }
+}
+
+function wa(){
+  var x = window.T || {};
+  var m = "*Quotation "+x.qn+"*\n"+
+          (x.cl ? "Client: "+x.cl+"\n" : "")+
+          "Project: "+x.pr+"\n"+
+          "Total incl. VAT: "+R(x.tot||0)+"\n"+
+          "Valid: "+x.val+"\n"+
+          "— "+CO.name+" | "+CO.tel;
+  try{
+    navigator.clipboard.writeText(m).then(
+      function(){ msg("Summary copied — ready to paste into WhatsApp."); },
+      function(){ msg("Copy blocked by the browser."); }
+    );
+  }catch(e){ msg("Copy blocked by the browser."); }
+}
+
+/* =========================================================
+   13. LOGO UPLOAD (overrides folder logo)
+   ========================================================= */
+$("lg").addEventListener("change", function(e){
+  var f = e.target.files[0];
+  if(!f) return;
+  var r = new FileReader();
+  r.onload = function(){
+    logo = r.result;
+    logoSource = "saved";
+    store.set("tl-logo", logo);
+    applyBrand();
+    go();
+    msg("Logo uploaded. To revert to the folder logo, clear browser storage.");
+  };
+  r.readAsDataURL(f);
+});
+
+/* =========================================================
+   14. AI PROMPT
+   ========================================================= */
+var STD = [
+  "This quotation is valid for 30 days from the quotation date.",
+  "Pricing is based on the quantities and measurements contained in the bid document.",
+  "Work shall commence subject to official appointment / Purchase Order.",
+  "Additional work outside the stated scope shall be subject to an approved variation."
+];
+
+var PROMPT =
+"You are a senior quantity surveyor and estimator's assistant for Thee Landlord (Pty) Ltd, "+
+"a South African construction company. Bids differ widely: some have a full BOQ, others only "+
+"a narrative scope, an RFQ email or a short specification. Derive the important details from "+
+"whatever is supplied and produce a complete, professional, submission-ready quotation based "+
+"on MY INFORMATION (my rates, quantities, lump sums, scope notes: whatever I provide). "+
+"Output EXACTLY this plain-text format and nothing else (no markdown fences, no commentary). "+
+"Every line is optional except Items: omit any line you cannot derive.\n\n"+
+"Quote No:\nDate:\nValidity: 30 days\nClient:\nReference:\nProject:\nSite:\nClosing Date:\nVAT %: 15\n\n"+
+"Scope:\n- <concise professional scope item, key quantities in **bold**>\n\n"+
+"Items:\nDescription | Qty | Unit | Rate | Amount\n\n"+
+"Notes:\n<one or two sentences on the pricing basis>\n\n"+
+"Terms:\n- <terms>\n\n"+
+"Checklist:\n- <submission requirement stated in the bid>\n\n"+
+"Flags:\n- <genuine issue to check>\n\n"+
+"RULES: 1) MY INFORMATION is the pricing authority: use my rates, lump sums and quantities "+
+"exactly as given. 2) Quantities: use mine if I give them, otherwise take them from the bid's "+
+"BOQ or specification; never alter or inflate them. 3) If the bid has a pricing schedule, "+
+"follow its line structure; if not, build sensible, clearly described lines from my information, "+
+"grouping related items. 4) A per-unit rate with a quantity goes in Rate (leave Amount empty); "+
+"a lump sum or total goes in Amount (leave Rate empty); do not do any arithmetic yourself. "+
+"5) Never invent a price. If the bid requires something I gave no price for, still list the line "+
+"without a price and add a short Flag (max 5 flags, genuine issues only). 6) Derive Client, "+
+"Reference, Project, Site, Closing Date and any other important details (e.g. Site Inspection, "+
+"CIDB Grade) from the bid; skip any that are not there. 7) Scope: a concise professional scope "+
+"drawn from the bid and my information. 8) Terms: include these standard terms (\""+
+STD.join(" ")+"\") plus any bid-specific conditions, concisely. 9) Include Checklist only if the "+
+"bid lists submission requirements. 10) Leave Quote No and Date empty.";
+
+/* =========================================================
+   15. FILE READING
+   ========================================================= */
+function stop(){ if(ctl) ctl.abort(); }
+
+async function readFile(f){
+  var ext = f.name.split(".").pop().toLowerCase();
+
+  if(f.type.indexOf("image/") === 0){
+    return {text:"[Image: "+f.name+"]", images:[f]};
+  }
+
+  if(ext === "xlsx" || ext === "xls"){
+    if(!window.XLSX) throw Error("Excel reader didn't load");
+    var wb = XLSX.read(await f.arrayBuffer());
+    return {text: wb.SheetNames.map(function(n){
+      return "## Sheet "+n+"\n"+XLSX.utils.sheet_to_csv(wb.Sheets[n]);
+    }).join("\n")};
+  }
+
+  if(ext === "doc") throw Error(f.name+" is an old .doc — save it as .docx or PDF first");
+
+  if(ext === "docx"){
+    if(!window.mammoth) throw Error("Word reader didn't load");
+    return {text:(await mammoth.extractRawText({arrayBuffer: await f.arrayBuffer()})).value};
+  }
+
+  if(ext === "pdf"){
+    if(!window.pdfjsLib) throw Error("PDF reader didn't load");
+    pdfjsLib.GlobalWorkerOptions.workerSrc =
+      "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+    var doc = await pdfjsLib.getDocument({data:new Uint8Array(await f.arrayBuffer())}).promise;
+    var t = "";
+    for(var i=1; i<=doc.numPages; i++){
+      var c = await (await doc.getPage(i)).getTextContent();
+      t += c.items.map(function(x){ return x.str+(x.hasEOL?"\n":" "); }).join("")+"\n";
+    }
+    if(t.replace(/\s/g,"").length >= 200) return {text:t};
+    var im = [];
+    for(var j=1; j<=Math.min(doc.numPages,5); j++){
+      var pg = await doc.getPage(j);
+      var vp = pg.getViewport({scale:1.4});
+      var cv = document.createElement("canvas");
+      cv.width = vp.width; cv.height = vp.height;
+      await pg.render({canvasContext:cv.getContext("2d"), viewport:vp}).promise;
+      im.push(await new Promise(function(r){ cv.toBlob(r,"image/jpeg",.72); }));
+    }
+    return {text:t+"\n[Scanned PDF: pages attached as images]", images:im};
+  }
+
+  return {text: await f.text()};
+}
+
+/* =========================================================
+   16. FILE CHIPS / DRAG-DROP
+   ========================================================= */
+function chips(){
+  [["bl",BID,0],["rl",RAT,1]].forEach(function(x){
+    $(x[0]).innerHTML = x[1].length
+      ? x[1].map(function(f){ return esc(f.name); }).join(" · ")+' <a onclick="clr('+x[2]+')">clear</a>'
+      : "";
+  });
+}
+function clr(r){ if(r) RAT = []; else BID = []; chips(); }
+
+function ingest(files, r){
+  var a = [].slice.call(files);
+  if(r) RAT = RAT.concat(a);
+  else  BID = BID.concat(a);
+  chips();
+  msg("Files added. Add your rates / information, then click Generate.");
+}
+
+window.addEventListener("dragover", function(e){
+  e.preventDefault();
+  $("dz").classList.add("ov");
+});
+window.addEventListener("dragleave", function(e){
+  if(!e.relatedTarget) $("dz").classList.remove("ov");
+});
+window.addEventListener("drop", function(e){
+  e.preventDefault();
+  $("dz").classList.remove("ov");
+  ingest(e.dataTransfer.files, e.target.closest && e.target.closest("#rtz") ? 1 : 0);
+});
+
+$("bd").addEventListener("change", function(e){ ingest(e.target.files, 0); e.target.value = ""; });
+$("rf").addEventListener("change", function(e){ ingest(e.target.files, 1); e.target.value = ""; });
+
+/* =========================================================
+   17. GENERATOR HELPERS
+   ========================================================= */
+function hdr(t, key, label, val, force){
+  var re = new RegExp("^"+key+"[^:\\n]*:(.*)$","mi");
+  var m = t.match(re);
+  if(m){
+    return (force || !m[1].trim()) ? t.replace(re, label+": "+val) : t;
+  }
+  return /\n\n/.test(t)
+    ? t.replace(/\n\n/, "\n"+label+": "+val+"\n\n")
+    : t+"\n"+label+": "+val;
+}
+
+function qna(h){
+  var i = (h.client||"").split(/[^A-Za-z]+/).filter(Boolean)
+            .map(function(w){ return w[0]; }).join("").toUpperCase().slice(0,5) || "Q";
+  var r = (h.reference||"").split(/[\/\s]+/).filter(Boolean);
+  return "TLL-"+i+"-"+(r.length >= 2 ? r.slice(-2).join("-") : new Date().toISOString().slice(0,10).replace(/-/g,""));
+}
+
+function fill(t){
+  var b = {}, n = 0, sec = "";
+  LIB.slice().reverse().forEach(function(q){
+    parse(q.src).items.forEach(function(it){
+      if(num(it.rate) !== null) b[norm(it.desc)+"|"+it.unit.toLowerCase()] = it.rate;
+    });
+  });
+  var o = t.split("\n").map(function(l){
+    var m = l.trim().match(/^(scope|items|notes|terms|checklist|flags)\s*:\s*$/i);
+    if(m){ sec = m[1].toLowerCase(); return l; }
+    if(sec !== "items" || l.indexOf("|") < 0) return l;
+    var p = l.split("|").map(function(x){ return x.trim(); });
+    if(p.length >= 5 && !p[3] && !p[4] && num(p[1]) !== null){
+      var r = b[norm(p[0])+"|"+p[2].toLowerCase()];
+      if(r){ p[3] = r; n++; return p.join(" | "); }
+    }
+    return l;
+  });
+  return {t:o.join("\n"), n:n};
+}
+
+function rck(){
+  var d = parse($("src").value);
+  var f = d.flags, c = d.checklist;
+  var e = $("ck");
+  e.style.display = f.length || c.length ? "block" : "none";
+  e.innerHTML = '<h4>Before you submit</h4>' +
+    f.map(function(x){ return '<div class="au"><span>⚠️</span><span>'+esc(x)+'</span></div>'; }).join("")+
+    c.map(function(x){ return '<label class="cb"><input type="checkbox">'+esc(x)+'</label>'; }).join("");
+}
+
+/* =========================================================
+   18. GENERATE (AI)
+   ========================================================= */
+async function gen(){
+  var rt = $("rt").value.trim();
+  if(!BID.length && !RAT.length && !rt){
+    msg("Add a bid document or your rates / information first.");
+    return;
+  }
+  var sample = null;
+  try{ sample = window.claude ? await claude.use("sample") : null; }catch(e){}
+  if(!sample){
+    msg("Generating from bid documents works inside the Claude viewer. Open the artifact in claude.ai, or paste details into the editor manually.");
+    return;
+  }
+
+  var bt = "", rx = "", imgs = [];
+  try{
+    for(var i=0; i<BID.length; i++){
+      msg("Reading "+BID[i].name+"…");
+      var r = await readFile(BID[i]);
+      bt += "\n\n===== BID FILE: "+BID[i].name+" =====\n"+r.text;
+      imgs = imgs.concat(r.images || []);
+    }
+    for(var j=0; j<RAT.length; j++){
+      msg("Reading "+RAT[j].name+"…");
+      var q = await readFile(RAT[j]);
+      rx += "\n\n===== RATES FILE: "+RAT[j].name+" =====\n"+q.text;
+      imgs = imgs.concat(q.images || []);
+    }
+  }catch(e){
+    msg("Couldn't read a file: "+e.message);
+    return;
+  }
+  if(rt) rx += "\n\n===== PASTED RATES =====\n"+rt;
+
+  PE = Object.assign({}, DEF, {chk:{}});
+  sync();
+  ctl = new AbortController();
+  $("stp").style.display = "";
+  $("gb").disabled = true;
+  msg("Claude is building your quotation… the first text can take up to a minute.");
+
+  var last = 0;
+  var o = {
+    signal: ctl.signal,
+    cache: false,
+    onText: function(x){
+      $("src").value = clean(x.text);
+      if(Date.now() - last > 700){ last = Date.now(); go(); }
+    }
+  };
+  if(imgs.length) o.images = imgs.slice(0,6);
+
+  try{
+    var res = await sample(PROMPT+"\n\nBID DOCUMENTS:"+bt.slice(0,150000)+"\n\nMY RATES:"+rx.slice(0,40000), o);
+    var f = fill(clean(res.text));
+    var t = f.t;
+    var mu = num($("mu").value);
+    if(mu === null) mu = 15;
+
+    t = hdr(t, "overhead", "Overhead %", mu, 1);
+    t = hdr(t, "date", "Date", new Date().toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"}));
+    t = hdr(t, "quote no", "Quote No", qna(parse(t).h));
+    $("src").value = t;
+    go();
+
+    var d = parse(t);
+    var un = d.items.filter(function(x){ return amt(x) <= 0; }).length;
+    msg("Quotation ready: "+(d.items.length - un)+" of "+d.items.length+" lines priced"+
+        (un ? " — "+un+" still need rates (see ‘Before you submit’)" : "")+
+        (d.flags.length ? "; "+d.flags.length+" flag(s) to check" : "")+
+        ". Review, then Save as PDF.");
+  }catch(e){
+    if(e.text){ $("src").value = clean(e.text); go(); }
+    msg(
+      e.code === "cancelled"    ? "Stopped." :
+      e.code === "not_granted"  ? "Permission declined, so Claude couldn't read the documents." :
+      e.code === "rate_limited" ? "Too many requests — wait a moment." :
+      "Couldn't generate ("+(e.code || "error")+"). Try fewer or smaller files."
+    );
+  }
+  $("stp").style.display = "none";
+  $("gb").disabled = false;
+}
+
+/* =========================================================
+   19. PRICING ENGINE
+   ========================================================= */
+var CHK = [
+  "Current supplier prices obtained (manufacturers / authorised distributors)",
+  "Benchmarked against prevailing market rates",
+  "Labour priced on realistic daily output, not % of materials",
+  "Equipment, vehicles and personnel resourced",
+  "Value engineering reviewed — no cut to spec or compliance",
+  "Supplier discounts, terms and delivery negotiated",
+  "Major work packages analysed separately",
+  "Independent second-person audit done"
+];
+
+function sync(){
+  PE.chk = PE.chk || {};
+  document.querySelectorAll("#pr [data-k]").forEach(function(e){
+    e.value = PE[e.dataset.k] == null ? "" : PE[e.dataset.k];
+  });
+}
+
+document.querySelectorAll("#pr [data-k]").forEach(function(e){
+  e.addEventListener("input", function(){
+    var k = e.dataset.k;
+    PE[k] = k === "risks" ? e.value : (num(e.value) || 0);
+    eng();
+    clearTimeout(st2);
+    st2 = setTimeout(function(){
+      if(window.T && T.n) save($("src").value);
+    }, 900);
+  });
+});
+
+function sug(){
+  var m = 12 +
+    [0,-3,3][PE.fc] +
+    [0,3,-2][PE.fr] +
+    [0,2,-2][PE.fs] +
+    [0,2][PE.fw];
+  PE.margin = Math.max(3,m);
+  sync();
+  eng();
+  msg("Suggested "+PE.margin+"% is only a starting heuristic — set it per bid.");
+}
+
+function amt(it){
+  var q = num(it.qty), r = num(it.rate), a = num(it.amt);
+  return a !== null ? a : (q !== null && r !== null ? q*r : 0);
+}
+
+function eng(){
+  var x = window.T || {};
+  var d = parse($("src").value);
+  var I = d.items;
+  var D = x.dir || 0;
+  var P = PE;
+  var rk = 0;
+
+  var rw = function(l,v,c){
+    return '<div class="rw '+(c||"")+'"><span>'+l+'</span><b>'+v+'</b></div>';
+  };
+
+  var ov  = D*P.oh/100;
+  var ct  = D*P.ct/100;
+  var fin = D*P.rate/100*P.days/365;
+
+  (P.risks||"").split("\n").forEach(function(l){
+    var p = l.split("|"), a = num(p[1]), b = num(p[2]);
+    if(a !== null && b !== null) rk += a/100*b;
+  });
+
+  var be  = D + ov + ct + fin + rk;
+  var pr  = be * (1 + P.margin/100);
+  var mx  = be * (1 + P.maxm/100);
+  var eff = D ? (pr - D)/D*100 : 0;
+  var cl  = P.ceil || 0;
+
+  var h = '<h4>Price build-up (excl. VAT)</h4>' +
+    rw("Direct cost (your rates × exact BOQ qty)", R(D)) +
+    rw("Overhead recovery", R(ov)) +
+    rw("Contingency", R(ct)) +
+    rw("Funding cost", R(fin)) +
+    rw("Risk allowance (expected value)", R(rk)) +
+    rw("Break-even price", R(be), "k") +
+    rw("Profit at "+P.margin+"%", R(pr - be)) +
+    rw("Target price", R(pr), "k") +
+    rw("Max competitive price", R(mx)) +
+    rw("Mark-up on direct cost to apply", eff.toFixed(2)+"%", "k");
+
+  var lo = be*.92;
+  var hi = Math.max(mx, cl) * 1.05;
+  var ps = function(v){ return Math.max(0, Math.min(100, (v-lo)/(hi-lo)*100)); };
+  var mk = function(v,c,l){
+    return '<i style="left:'+ps(v)+'%;background:'+c+'"></i>'+
+           '<u style="left:'+ps(v)+'%">'+l+'</u>';
+  };
+  h += '<h4>Win / profit balance</h4><div class="pbar">' +
+    (D ? mk(be,"#ff6b6b","Break-even") +
+         mk(pr,"#e6c964","Target") +
+         mk(mx,"#3ddc97","Max") +
+         (cl ? mk(cl,"#fff","Ceiling") : "") : "") +
+    '</div>';
+
+  if(cl){
+    h += rw("Ceiling headroom vs target", R(cl-pr), cl < be ? "bad" : "") +
+         rw("Margin if priced at ceiling", be ? ((cl-be)/be*100).toFixed(1)+"%" : "–", cl < be ? "bad" : "ok");
+  }
+
+  var sp = [P.s0,P.s1,P.s2,P.s3];
+  var st = sp.reduce(function(a,b){ return a+b; }, 0) || 1;
+  h += '<h4>Sensitivity — profit if costs rise</h4>';
+  [
+    ["Materials +10%",0,.1],
+    ["Labour +10%",1,.1],
+    ["Transport / equipment +15%",2,.15],
+    ["Other +10%",3,.1],
+    ["All direct costs +5%",-1,.05]
+  ].forEach(function(c){
+    var dl = c[1] < 0 ? D*c[2] : D*sp[c[1]]/st*c[2];
+    var pf = pr - (be + dl);
+    h += rw(c[0], R(pf)+" ("+(be?(pf/(be+dl)*100).toFixed(1):0)+"%)", pf <= 0 ? "bad" : "");
+  });
+
+  var top = I.map(function(i){ return [i.desc, amt(i)]; })
+             .sort(function(a,b){ return b[1]-a[1]; })
+             .slice(0,5);
+  h += '<h4>Package focus — where savings matter</h4>' +
+    top.map(function(t){
+      var w = D ? t[1]/D*100 : 0;
+      return '<div style="font-size:10px;margin:4px 0">'+esc(t[0]).slice(0,42)+' · '+w.toFixed(0)+'%'+
+             '<div class="tb" style="width:'+w+'%"></div></div>';
+    }).join("");
+
+  var A = [];
+  var ad = function(ok,t){ A.push('<div class="au"><span>'+(ok?"✅":"⚠️")+'</span><span>'+t+'</span></div>'); };
+
+  var un = I.filter(function(i){ return amt(i) <= 0; }).length;
+  ad(!un && I.length, un ? un+" line(s) have no price" : "Every line is priced");
+
+  var mm = I.filter(function(i){
+    var q = num(i.qty), r = num(i.rate), a = num(i.amt);
+    return q !== null && r !== null && a !== null && Math.abs(q*r - a) > .01;
+  }).length;
+  ad(!mm, mm ? mm+" line(s) where qty × rate ≠ amount" : "Quantities × rates reconcile");
+
+  var nm = I.map(function(i){ return norm(i.desc); });
+  var dp = nm.filter(function(v,i){ return nm.indexOf(v) !== i; }).length;
+  ad(!dp, dp ? dp+" duplicate line description(s)" : "No duplicate lines");
+
+  var al = I.filter(function(i){ return num(i.qty) === null || /allow|lump/i.test(i.qty); })
+            .reduce(function(a,i){ return a + amt(i); }, 0);
+  var ap = D ? al/D*100 : 0;
+  ad(ap < 40, "Allowances are "+ap.toFixed(0)+"% of direct cost"+
+      (ap >= 40 ? " — confirm each is genuine, no hidden buffers" : ""));
+
+  ad(top[0] && D && top[0][1]/D < .35,
+     "Largest line is "+(top[0] && D ? (top[0][1]/D*100).toFixed(0) : 0)+"% of direct cost");
+
+  ad(I.some(function(i){ return /compli|ohs|safety|prelim|mobilis|admin/i.test(i.desc); }),
+     "Compliance / OHS / preliminaries cost is included");
+
+  ad(/variation/i.test(d.notes.join(" ")+d.terms.join(" ")),
+     "Variation / scope-control wording present");
+
+  ad(D && pr > be && P.margin >= 5,
+     P.margin < 5 ? "Target margin is below 5%" : "Target price is above break-even");
+
+  var ohq = num(d.h["overhead %"] || d.h["overhead"] || d.h["margin"]);
+  ad(!D || (ohq !== null && Math.abs(ohq-eff) < .05),
+     "Quotation mark-up "+(ohq == null ? "not set" : ohq+"%")+
+     " vs engine "+eff.toFixed(2)+"%"+
+     (ohq != null && Math.abs(ohq-eff) < .05 ? "" : " — click Apply"));
+
+  var rc = Math.abs(x.tot - D*(1+(ohq||0)/100)*(1+((num(d.h["vat %"] || d.h["vat"]))==null ? 15 : num(d.h["vat %"] || d.h["vat"]))/100)) < .05*(I.length+1);
+  ad(rc || !D, "Totals and VAT reconcile");
+
+  if(cl) ad(cl >= be, cl >= be ? "Ceiling is above break-even" : "Ceiling is BELOW break-even — re-check costs before bidding");
+
+  var ck = CHK.filter(function(c,i){ return P.chk[i]; }).length;
+  h += '<h4>Post-pricing audit</h4>' + A.join("") +
+       '<h4>Pricing readiness · '+ck+'/'+CHK.length+'</h4>' +
+       CHK.map(function(c,i){
+         return '<label class="cb"><input type="checkbox" data-c="'+i+'"'+(P.chk[i]?" checked":"")+'>'+c+'</label>';
+       }).join("");
+
+  $("pres").innerHTML = h;
+}
+
+$("pres").addEventListener("change", function(e){
+  if(e.target.dataset.c != null){
+    PE.chk[e.target.dataset.c] = e.target.checked;
+    eng();
+    if(window.T && T.n) save($("src").value);
+  }
+});
+
+function apl(){
+  if(!window.T || !T.dir){ msg("Add priced lines first."); return; }
+  var D = T.dir;
+  var be = D*(1+(PE.oh+PE.ct)/100) + D*PE.rate/100*PE.days/365;
+  var rk = 0;
+  (PE.risks||"").split("\n").forEach(function(l){
+    var p = l.split("|"), a = num(p[1]), b = num(p[2]);
+    if(a !== null && b !== null) rk += a/100*b;
+  });
+  var e = ((be+rk)*(1+PE.margin/100) - D)/D*100;
+  var v = e.toFixed(2);
+  var t = $("src").value;
+  t = /^overhead[^:\n]*:.*$/mi.test(t)
+    ? t.replace(/^overhead[^:\n]*:.*$/mi, "Overhead %: "+v)
+    : t.replace(/\n\n/, "\nOverhead %: "+v+"\n\n");
+  $("src").value = t;
+  go();
+  msg("Applied — the quotation now carries "+v+"% as a blended overheads & profit line; your internal breakdown stays private.");
+}
+
+/* =========================================================
+   20. BOOT
+   ========================================================= */
+sync();
+rl();
+chips();
+applyBrand();
+
+/* Start with saved or example quotation */
+var saved = store.get("tl-src") || "";
+$("src").value = saved || EX;
+go();
+
+/* After first render, try to load a local logo from the same folder */
+probeLocalLogo();
+</script>
+</body>
+</html>
